@@ -1,4 +1,4 @@
-﻿using Emgu.CV;
+using Emgu.CV;
 
 class Program
 {
@@ -61,11 +61,12 @@ class Program
             Console.WriteLine("Original resolution is " + Capture.Width + "x" + Capture.Height);
 
             Console.Write("Target width: ");
-            if (int.TryParse(Console.ReadLine(), out int targetResX))
+            if (int.TryParse(Console.ReadLine(), out targetResX))
             {
                 targetResY = (int)(1f * Capture.Height / Capture.Width * targetResX);
 
-                quality = 1f * targetResX / Capture.Width;
+                quality = 1f * targetResY / Capture.Height;
+                targetResX = (int)(Capture.Width * quality);
 
                 Console.WriteLine("Target resolution is " + targetResX + "x" + targetResY);
                 if (Capture.Width % targetResX != 0)
@@ -131,7 +132,6 @@ class Program
             while (run)
             {
                 ProcessFrame();
-                Thread.Sleep(1);
             }
 
             Console.WriteLine("Saving the data...\n");
