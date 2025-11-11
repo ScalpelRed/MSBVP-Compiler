@@ -1,7 +1,7 @@
 ﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
 
-namespace MSBVPv2_compiler
+namespace MSBVPv2.Compiler
 {
     public class FrameGetter
     {

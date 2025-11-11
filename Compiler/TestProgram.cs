@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace MSBVPv2_compiler
+namespace MSBVPv2.Compiler
 {
     internal class TestProgram
     {
