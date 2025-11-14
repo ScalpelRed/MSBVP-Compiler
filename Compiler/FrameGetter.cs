@@ -40,8 +40,8 @@ namespace MSBVPv2.Compiler
             int frameHeight = -1;
             byte[] frameBuffer = [];
 
-            List<(int, int)> currentFrame;
-            (int, int)[] lastUniqueFrame = [];
+            List<(byte, int)> currentFrame;
+            (byte, int)[] lastUniqueFrame = [];
 
             while (frameMat is not null) // the cycle breaks itself when no more frames
             {
@@ -64,7 +64,7 @@ namespace MSBVPv2.Compiler
 
                     currentFrame = [];
                     frameMat.CopyTo(frameBuffer);
-                    int color = 0;
+                    byte color = 0;
                     int count = 0;
 
                     int indexY = 0;
@@ -75,7 +75,7 @@ namespace MSBVPv2.Compiler
                         int indexFrac = 0;
                         for (int x = 0; x < TargetWidth; x++)
                         {
-                            int pixelColor = (frameBuffer[index] + frameBuffer[index+1] + frameBuffer[index+2] > 384) ? 1 : 0;
+                            byte pixelColor = (byte)((frameBuffer[index] + frameBuffer[index+1] + frameBuffer[index+2] > 384) ? 1 : 0);
                             if (color == pixelColor) count++;
                             else
                             {
@@ -129,7 +129,7 @@ namespace MSBVPv2.Compiler
             await Task.Run(Run);
         }
 
-        public event Action<(int color, int count)[]>? FrameAvailable;
+        public event Action<(byte color, int count)[]>? FrameAvailable;
 
     }
 }
