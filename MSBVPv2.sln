@@ -10,6 +10,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI", "CLI\CLI.csproj", "{06A18784-0637-D443-2E01-0885CF7266DF}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shader", "Shader", "{18613FB2-D61A-47FF-848F-7A2240F68FC6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shaders", "shaders", "{312152A8-25A0-4B07-B6E9-10F0AD9D3929}"
@@ -30,6 +32,10 @@ Global
 		{706201FE-D010-0862-3AFC-B5774F2F7380}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{706201FE-D010-0862-3AFC-B5774F2F7380}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{706201FE-D010-0862-3AFC-B5774F2F7380}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06A18784-0637-D443-2E01-0885CF7266DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06A18784-0637-D443-2E01-0885CF7266DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06A18784-0637-D443-2E01-0885CF7266DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06A18784-0637-D443-2E01-0885CF7266DF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
