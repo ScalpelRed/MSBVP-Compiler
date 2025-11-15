@@ -10,6 +10,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shader", "Shader", "{18613FB2-D61A-47FF-848F-7A2240F68FC6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shaders", "shaders", "{312152A8-25A0-4B07-B6E9-10F0AD9D3929}"
+	ProjectSection(SolutionItems) = preProject
+		Shader\shaders\gbuffers_textured.fsh = Shader\shaders\gbuffers_textured.fsh
+		Shader\shaders\gbuffers_textured.vsh = Shader\shaders\gbuffers_textured.vsh
+		Shader\shaders\player.glsl = Shader\shaders\player.glsl
+		Shader\shaders\video.glsl = Shader\shaders\video.glsl
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +33,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{312152A8-25A0-4B07-B6E9-10F0AD9D3929} = {18613FB2-D61A-47FF-848F-7A2240F68FC6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {49D8DD01-23FF-43D8-8921-5EDDC74C8F8D}
