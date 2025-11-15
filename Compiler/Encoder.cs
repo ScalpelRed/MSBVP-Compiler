@@ -30,9 +30,11 @@ namespace MSBVPv2.Compiler
         }
 
         public int[] EncodeFrame((byte color, int count)[] frame)
-        { 
+        {
+            if (frame.Length <= 0) return [ ];
             List<int> res = [];
             int groupIndex = 0;
+            (byte color, int count) group = frame[groupIndex];
             while (groupIndex < frame.Length)
             {
                 int maxGroups = 0;
@@ -58,7 +60,6 @@ namespace MSBVPv2.Compiler
                 }
 
                 CompressedGroupInfo comp = CompressedGroups[maxGroupsComp];
-                (byte color, int count) group = frame[groupIndex];
                 int shift = 0;
                 int resInt = 0;
                 for (int i = 0; i < comp.GroupCount; i++)
@@ -83,7 +84,7 @@ namespace MSBVPv2.Compiler
                 res.Add(resInt);
 
                 // TODO remove debug
-                Console.WriteLine(Convert.ToString(resInt, 2).PadLeft(32, '0'));
+                /*Console.WriteLine(Convert.ToString(resInt, 2).PadLeft(32, '0'));
                 char c1 = '█';
                 char c2 = ' ';
                 Console.Write("██");
@@ -92,10 +93,10 @@ namespace MSBVPv2.Compiler
                     (c1, c2) = (c2, c1);
                     for (int p = comp.CountBitsPerGroup; p >= 0; p--) Console.Write(c1);
                 }
-                Console.WriteLine();
+                Console.WriteLine();*/
             }
-            for (int i = 0; i < 20; i++) Console.WriteLine("                                ");
-            Console.SetCursorPosition(0, 0);
+            /*for (int i = 0; i < 20; i++) Console.WriteLine("                                ");
+            Console.SetCursorPosition(0, 0);*/
             return res.ToArray();
         }
 
