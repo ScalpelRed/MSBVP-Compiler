@@ -100,9 +100,9 @@ namespace MSBVPv2.Compiler
             return res.ToArray();
         }
 
-        public string GetDecodeGLSLFuncBody()
+        public async Task<int[]> EncodeFrameAsync((byte color, int count)[] frame)
         {
-            throw new NotImplementedException(); // TODO
+            return await Task.Run(() => EncodeFrame(frame));
         }
 
         private class CompressedGroupInfo
