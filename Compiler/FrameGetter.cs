@@ -103,12 +103,12 @@ namespace MSBVPv2.Compiler
                     }
                     currentFrame.Add((color, count)); // adding the last pixel group (we didn't add it in xy-cycle)
                     lastUniqueFrame = currentFrame.ToArray();
-                    FrameAvailable?.Invoke(lastUniqueFrame);
+                    OnFrameAvailable(lastUniqueFrame);
                 }
                 else
                 {
                     // if no frames fetched, but we need one more - we return the previous one
-                    FrameAvailable?.Invoke(lastUniqueFrame);
+                    OnFrameAvailable(lastUniqueFrame);
                 }
 
                 // getting next frame (skipping some by step and one more if fractional part overflows)
@@ -127,6 +127,11 @@ namespace MSBVPv2.Compiler
         public async Task RunAsync()
         {
             await Task.Run(Run);
+        }
+
+        private async void OnFrameAvailable((byte color, int count)[] frame)
+        {
+            await Task.Run(() => FrameAvailable?.Invoke(frame));
         }
 
         public event Action<(byte color, int count)[]>? FrameAvailable;
