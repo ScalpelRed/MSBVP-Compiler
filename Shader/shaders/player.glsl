@@ -4,9 +4,9 @@
 
 float getPixel(vec2 fragCoord, vec2 screenSize, float time) {
 
-	vec2 pixelPos = floor(fragCoord / screenSize * frameSize);
-	pixelPos.y = frameSize.y - pixelPos.y - 1;
-	int pixelIndex = int(floor(pixelPos.y * frameSize.x + pixelPos.x));
+	vec2 pixelPos = floor(fragCoord / screenSize * vec2(width, height));
+	pixelPos.y = height - pixelPos.y - 1;
+	int pixelIndex = int(floor(pixelPos.y * width + pixelPos.x));
 	int framePos = int(floor(time * fps)) % frameCount;
 	int intIndex = frameInds[framePos];
 	int intIndexLim = frameInds[framePos + 1];
