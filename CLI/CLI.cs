@@ -19,16 +19,21 @@ internal class CLI
     public void RunCLI()
     {
         // TODO write max length
-        Console.WriteLine(@"
-Before making a shader: some graphic cards don't support long arrays.
-For reference: AMD Radeon Vega 8 (2018) supports <CHECK> (may differ with various drivers)
-If your shader doesn't load due to some errors - check console for shader compilation errors.
+        Console.WriteLine(@"Before making a shader (PLEASE READ THIS ALL FOR YOUR OWN GOOD)
+
+1) Some graphic cards don't support long arrays. If your shader doesn't load due to some errors - check console for shader compilation errors.
 If you see something like:
 - Too large array
 - Too large shader
 - Array size must be a positive integer
-- HW_UNSUPPORTED, E_SC_MULTIPLY_DEFINED_LITERAL
-Then I can't help with that. It means that the array is too big for your hardware, and you can try using smaller frame dimensions or less fps.
+- HW_UNSUPPORTED
+- Program Link Failed for unknown reason (not always caused by large arrays)
+It means that the array is too big for your hardware, and you can try using smaller frame dimensions or less fps.
+
+2) The game reloads shaders when starting and also doing it multiple times when joining a world.
+So it's better to join the world without shaders and only then turn it on. Also, it's better to disable it before closing the game to avoid long loading next time.
+(If you closed the game with the shader on, you can set shaderPack=MSBVPv2 to shaderpack= in config\iris.properties for Iris or in optionsshaders.txt for OF)
+
 Press ENTER to continue");
         Console.ReadLine();
 
@@ -121,12 +126,17 @@ Press ENTER to continue");
             {
                 int[] fcomp = enc.EncodeFrame(frame);
                 outf.PushCompressedFrame(fcomp);
-                if ((outf.FrameCount & 0x7F) == 0) Console.WriteLine($"Processed {outf.FrameCount} frames");
+                int frameCount = outf.GetFrameCount();
+                if ((frameCount & 0x7F) == 0) Console.WriteLine($"Processed {frameCount} frames");
             }
         }
+        Console.WriteLine($"Processed {outf.GetFrameCount()} frames");
         Console.WriteLine("Writing other data...");
         outf.FinalizeFile();
-        Console.WriteLine("Done!");
+        int bytes = (outf.GetDataArrayLength() + outf.GetIndexArrayLength()) * 4;
+        Console.WriteLine($"Done! {bytes} bytes of data and indexes.");
+        Console.WriteLine("Press ENTER to exit");
+        Console.ReadLine();
     }
 
     public static string Read(string prompt)

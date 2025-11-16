@@ -10,8 +10,8 @@
         public float Fps = 0f;
         public int Width = 0;
         public int Height = 0;
-        public int FrameCount { get; private set; } = 0;
-        public int FrameInd { get; private set; } = 0;
+        private int FrameCount = 0;
+        private int FrameInd = 0;
         private readonly List<int> FrameInds = [];
 
         public ShaderVideoFileWriter(Stream output)
@@ -64,5 +64,11 @@
                 Writer.Close();
             }
         }
+
+        public int GetFrameCount() => FrameCount;
+
+        public int GetDataArrayLength() => FrameInd;
+
+        public int GetIndexArrayLength() => FrameInds.Count;
     }
 }
