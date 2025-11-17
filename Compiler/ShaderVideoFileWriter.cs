@@ -1,10 +1,12 @@
-﻿namespace MSBVPv2.Compiler
+﻿using System.Text;
+
+namespace MSBVPv2.Compiler
 {
     public class ShaderVideoFileWriter
     {
         private readonly StreamWriter Writer;
-        private bool IsFirstFrame = true;
-        private bool Finalized;
+        private bool NotFirstFrame = false;
+        private bool Finalized = false;
 
         public string Name = "None";
         public float Fps = 0f;
@@ -27,17 +29,11 @@
                 if (Finalized) throw new InvalidOperationException("Shader file is already finalized.");
                 if (frame.Length != 0)
                 {
-                    string s = string.Join(',', frame);
-                    if (IsFirstFrame)
-                    {
-                        Writer.Write(s);
-                        IsFirstFrame = false;
-                    }
-                    else
-                    {
-                        Writer.Write(',');
-                        Writer.Write(s);
-                    }
+                    StringBuilder sb = new();
+                    if (NotFirstFrame) sb.Append(',');
+                    else NotFirstFrame = true;
+                    sb.AppendJoin(',', frame);
+                    Writer.Write(sb.ToString());
                     FrameInds.Add(FrameInd);
                     FrameInd += frame.Length;
                     FrameCount++;
@@ -48,20 +44,25 @@
         public void FinalizeFile()
         {
             lock (Writer) {
-                Writer.WriteLine(");");
+                StringBuilder sb = new();
 
-                Writer.Write("const int[] frameInds=int[](");
-                Writer.Write(string.Join(',', FrameInds));
-                Writer.WriteLine(");");
+                if (!NotFirstFrame) sb.Append('0');
+                sb.AppendLine(");");
 
-                Writer.WriteLine($"#define name {Name}");
-                Writer.WriteLine($"#define fps {Fps}");
-                Writer.WriteLine($"#define frameCount {FrameCount}");
-                Writer.WriteLine($"#define width {Width}");
-                Writer.WriteLine($"#define height {Height}");
+                sb.Append("const int[] frameInds=int[](");
+                
+                if (FrameInds.Count == 0) sb.Append('0');
+                sb.AppendJoin(',', FrameInds);
+                sb.AppendLine(");");
 
-                Finalized = true;
+                sb.AppendLine($"#define name {Name}");
+                sb.AppendLine($"#define fps {Fps}");
+                sb.AppendLine($"#define frameCount {FrameCount}");
+                sb.AppendLine($"#define width {Width}");
+                sb.AppendLine($"#define height {Height}");
+                Writer.Write(sb.ToString());
                 Writer.Close();
+                Finalized = true;
             }
         }
 
