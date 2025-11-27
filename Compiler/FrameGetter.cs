@@ -1,5 +1,6 @@
 ﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
+using Emgu.CV.Structure;
 
 namespace MSBVPv2.Compiler
 {
@@ -8,133 +9,106 @@ namespace MSBVPv2.Compiler
         private readonly string FilePath;
         private readonly int TargetWidth;
         private readonly int TargetHeight;
-        private readonly double TargetFps;
+        private readonly float TargetFps;
+        private readonly IColorSystem TargetColorSystem;
 
-        public FrameGetter(string filePath, int targetWidth, int targetHeight, double targetFps) 
+        private readonly VideoCapture Capture;
+        private Mat? Frame;
+        private bool NewFrame = true;
+
+        private readonly int FrameStepInt;
+        private readonly int FrameStepFrac;
+        private int FrameIndFrac = 0;
+
+        private readonly byte[] FrameArray;
+
+        public FrameGetter(string filePath, int targetWidth, int targetHeight, float targetFps, IColorSystem targetColorSystem)
         {
             FilePath = filePath;
             TargetWidth = targetWidth;
             TargetHeight = targetHeight;
             TargetFps = targetFps;
-        }
+            TargetColorSystem = targetColorSystem;
 
-        public void Run()
-        {
-            VideoCapture capture = new(FilePath);
+            Capture = new(FilePath);
+            Frame = Capture.QueryFrame();
 
             // frame and pixel position to save are calculated by interpolation used in Bresenham's line algorithm
-            double fpsCoef = capture.Get(CapProp.Fps) / TargetFps;
-            int frameStepInt = (int)Math.Floor(fpsCoef);
-            int frameStepFrac = (int)Math.Floor((fpsCoef - frameStepInt) * 1000); // it can't be fully represented with ints, so we'll use precision of 1/1000
-            int frameIndFrac = 0;
+            float fpsCoef = (float)Capture.Get(CapProp.Fps) / TargetFps;
+            FrameStepInt = (int)MathF.Floor(fpsCoef);
+            FrameStepFrac = (int)MathF.Floor((fpsCoef - FrameStepInt) * 1000f); // it can't be fully represented with ints, so we'll use precision of 1/1000
+            // TODO handle frame steps not fitting int or being zero both
 
-            // indexes of pixel data (3 bytes) in frame array
-            int indexStep = -1; // for index in one line
-            int indexStepFrac = -1;
-            int yIndexStep = -1; // for index at beginning of a line (indexY)
-            int yIndexStepFrac = -1;
+            int outArrayLength = TargetWidth * TargetHeight * targetColorSystem.BitsPerColor;
+            outArrayLength = (outArrayLength + 7) >> 3;
+            FrameArray = new byte[outArrayLength]; // TODO other color systems
+        }
 
-            Mat? frameMat = capture.QueryFrame();
-            bool newFrame = true;
-            int frameWidth = -1;
-            int frameHeight = -1;
-            byte[] frameBuffer = [];
+        public bool QueryFrame(BitAccumulator dest)
+        {
+            if (Frame is null) return false;
 
-            List<(byte, int)> currentFrame;
-            (byte, int)[] lastUniqueFrame = [];
-
-            while (frameMat is not null) // the cycle breaks itself when no more frames
+            if (NewFrame)
             {
-                if (newFrame) // if this frame is different from previous (in meaning that no frames were fetched, there's no actual comparison)
+                Image<Rgba, double> image = Frame.ToImage<Rgba, double>(true);
+                int frameWidth = Frame.Cols;
+                int frameHeight = Frame.Rows;
+
+                int stepXInt = frameWidth / TargetWidth;
+                int stepXFrac = frameWidth - stepXInt * TargetWidth;
+
+                int stepYInt = frameHeight / TargetHeight;
+                int stepYFrac = frameHeight - stepYInt * TargetHeight;
+
+                int yInt = 0;
+                int yFrac = 0;
+                for (int y = 0; y < TargetHeight; y++)
                 {
-                    if (frameWidth != frameMat.Cols || frameHeight != frameMat.Rows) // if frame size changed, for varying frame size
+                    int xInt = yInt;
+                    int xFrac = 0;
+                    for (int x = 0; x < TargetWidth; x++)
                     {
-                        frameWidth = frameMat.Cols;
-                        frameHeight = frameMat.Rows;
-                        frameBuffer = new byte[frameWidth * frameHeight * 3];
+                        TargetColorSystem.Encode(
+                             image.Data[xInt, yInt, 0], image.Data[xInt, yInt, 1], image.Data[xInt, yInt, 2], image.Data[xInt, yInt, 3],
+                             dest
+                        );
 
-                        indexStep = frameWidth / TargetWidth; // value needed for fractional step
-                        indexStepFrac = frameWidth - indexStep * TargetWidth;
-                        indexStep *= 3; // actual stride
-
-                        yIndexStep = frameHeight / TargetHeight; // value needed for fractional step
-                        yIndexStepFrac = frameHeight - yIndexStep * TargetHeight;
-                        yIndexStep *= 3 * frameWidth; // actual stride
-                    }
-
-                    currentFrame = [];
-                    frameMat.CopyTo(frameBuffer);
-                    byte color = 0;
-                    int count = 0;
-
-                    int indexY = 0;
-                    int indexYFrac = 0;
-                    for (int y = 0; y < TargetHeight; y++)
-                    {
-                        int index = indexY;
-                        int indexFrac = 0;
-                        for (int x = 0; x < TargetWidth; x++)
+                        xInt += stepXInt;
+                        xFrac += stepXFrac;
+                        if (xFrac >= TargetWidth)
                         {
-                            byte pixelColor = (byte)((frameBuffer[index] + frameBuffer[index+1] + frameBuffer[index+2] > 384) ? 1 : 0);
-                            if (color == pixelColor) count++;
-                            else
-                            {
-                                if (count > 0) currentFrame.Add((color, count));
-                                color = pixelColor;
-                                count = 1;
-                            }
-
-                            index += indexStep;
-                            indexFrac += indexStepFrac; // increasing index
-                            if (indexFrac > TargetWidth)
-                            {
-                                index += 3;
-                                indexFrac -= TargetWidth;
-                            }
-                        }
-
-                        indexY += yIndexStep;
-                        indexYFrac += yIndexStepFrac; // increasing indexY
-                        if (indexYFrac > TargetHeight)
-                        {
-                            indexY += frameWidth * 3;
-                            indexYFrac -= TargetHeight;
+                            xFrac -= TargetWidth;
+                            xInt++;
                         }
                     }
-                    currentFrame.Add((color, count)); // adding the last pixel group (we didn't add it in xy-cycle)
-                    lastUniqueFrame = currentFrame.ToArray();
-                    OnFrameAvailable(lastUniqueFrame);
-                }
-                else
-                {
-                    // if no frames fetched, but we need one more - we return the previous one
-                    OnFrameAvailable(lastUniqueFrame);
-                }
 
-                // getting next frame (skipping some by step and one more if fractional part overflows)
-                for (int i = 0; i < frameStepInt; i++) frameMat = capture.QueryFrame();
-                newFrame = frameStepInt > 0;
-                frameIndFrac += frameStepFrac;
-                if (frameIndFrac >= 1000)
-                {
-                    frameMat = capture.QueryFrame();
-                    newFrame = true;
-                    frameIndFrac -= 1000;
+                    yInt += stepYInt;
+                    yFrac += stepYFrac;
+                    if (yFrac >= TargetHeight)
+                    {
+                        yFrac -= TargetHeight;
+                        yInt++;
+                    }
                 }
             }
+
+            // getting next frame (skipping some by step and one more if fractional part overflows)
+            for (int i = 0; i < FrameStepInt && Frame is not null; i++) Frame = Capture.QueryFrame();
+            NewFrame = FrameStepInt > 0;
+            FrameIndFrac += FrameStepFrac;
+            if (FrameIndFrac >= 1000)
+            {
+                Frame = Capture.QueryFrame();
+                NewFrame = true;
+                FrameIndFrac -= 1000;
+            }
+
+            return true;
         }
 
-        public async Task RunAsync()
+        public async Task QueryFrameAsync(BitAccumulator dest)
         {
-            await Task.Run(Run);
+            await Task.Run(() => QueryFrame(dest));
         }
-
-        private async void OnFrameAvailable((byte color, int count)[] frame)
-        {
-            await Task.Run(() => FrameAvailable?.Invoke(frame));
-        }
-
-        public event Action<(byte color, int count)[]>? FrameAvailable;
-
     }
 }
