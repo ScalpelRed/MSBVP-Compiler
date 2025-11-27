@@ -10,7 +10,6 @@ namespace MSBVPv2.Compiler
         private readonly int TargetWidth;
         private readonly int TargetHeight;
         private readonly float TargetFps;
-        private readonly IColorSystem TargetColorSystem;
 
         private readonly VideoCapture Capture;
         private Mat? Frame;
@@ -20,15 +19,12 @@ namespace MSBVPv2.Compiler
         private readonly int FrameStepFrac;
         private int FrameIndFrac = 0;
 
-        private readonly byte[] FrameArray;
-
-        public FrameGetter(string filePath, int targetWidth, int targetHeight, float targetFps, IColorSystem targetColorSystem)
+        public FrameGetter(string filePath, int targetWidth, int targetHeight, float targetFps)
         {
             FilePath = filePath;
             TargetWidth = targetWidth;
             TargetHeight = targetHeight;
             TargetFps = targetFps;
-            TargetColorSystem = targetColorSystem;
 
             Capture = new(FilePath);
             Frame = Capture.QueryFrame();
@@ -68,10 +64,12 @@ namespace MSBVPv2.Compiler
                     int xFrac = 0;
                     for (int x = 0; x < TargetWidth; x++)
                     {
-                        TargetColorSystem.Encode(
-                             image.Data[xInt, yInt, 0], image.Data[xInt, yInt, 1], image.Data[xInt, yInt, 2], image.Data[xInt, yInt, 3],
-                             dest
-                        );
+                        double c =
+                            image.Data[xInt, yInt, 0] +
+                            image.Data[xInt, yInt, 1] +
+                            image.Data[xInt, yInt, 2] +
+                            image.Data[xInt, yInt, 3];
+                        dest.AddBit(c > 2.0);
 
                         xInt += stepXInt;
                         xFrac += stepXFrac;

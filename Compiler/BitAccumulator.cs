@@ -61,6 +61,36 @@
             }
         }
 
+        public void AddBit(bool value)
+        {
+            lock (bytesLock)
+            {
+                if (value) ExtraBits |= (byte)(1 << ExtraBitCount); // TODO  remove. branching.
+                ExtraBitCount++;
+                if (ExtraBitCount >= 8)
+                {
+                    ExtraBitCount -= 8;
+                    FullBytes.Add(ExtraBits);
+                    ExtraBits = 0;
+                }
+            }
+        }
+
+        public void AddBit(byte value) 
+        {
+            lock (bytesLock)
+            {
+                ExtraBits |= (byte)((value & 0x1) << ExtraBitCount);
+                ExtraBitCount++;
+                if (ExtraBitCount >= 8)
+                {
+                    ExtraBitCount -= 8;
+                    FullBytes.Add(ExtraBits);
+                    ExtraBits = 0;
+                }
+            }
+        }
+
         private static unsafe void ThrowIfBitCountInvalid<T>(int bitCount) where T : unmanaged
         {
             if (bitCount < 0) throw new ArgumentException("Bit count cannot be negative");
