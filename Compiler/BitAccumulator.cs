@@ -6,7 +6,6 @@
         private readonly List<byte> FullBytes = [];
         private byte ExtraBits = 0;
         private int ExtraBitCount = 0;
-        private readonly object bytesLock = new();
 
         public BitAccumulator()
         {
@@ -16,8 +15,6 @@
         public unsafe void AddBits<T>(T value, int bitCount) where T : unmanaged
         {
             ThrowIfBitCountInvalid<T>(bitCount);
-            lock (bytesLock)
-            {
                 byte bits = ExtraBits;
                 int shiftAmount = ExtraBitCount;
                 byte* ptr = (byte*)&value;
@@ -42,14 +39,11 @@
                 ExtraBits = bits;
                 ExtraBitCount = shiftAmount;
             }
-        }
 
         public void AddBits(byte value, int bitCount)
         {
             ThrowIfBitCountInvalid<byte>(bitCount);
             if (bitCount == 0) return;
-            lock (bytesLock)
-            {
                 ExtraBits |= (byte)((value << ExtraBitCount) & 0xFF);
                 ExtraBitCount += bitCount;
                 if (ExtraBitCount >= 8)
@@ -59,12 +53,9 @@
                     ExtraBits = (byte)(value >> (8 - ExtraBitCount));
                 }
             }
-        }
 
         public void AddBit(bool value)
         {
-            lock (bytesLock)
-            {
                 if (value) ExtraBits |= (byte)(1 << ExtraBitCount); // TODO  remove. branching.
                 ExtraBitCount++;
                 if (ExtraBitCount >= 8)
@@ -74,12 +65,9 @@
                     ExtraBits = 0;
                 }
             }
-        }
 
         public void AddBit(byte value) 
         {
-            lock (bytesLock)
-            {
                 ExtraBits |= (byte)((value & 0x1) << ExtraBitCount);
                 ExtraBitCount++;
                 if (ExtraBitCount >= 8)
@@ -89,36 +77,41 @@
                     ExtraBits = 0;
                 }
             }
-        }
 
-        private static unsafe void ThrowIfBitCountInvalid<T>(int bitCount) where T : unmanaged
+        private static unsafe void ThrowIfBitCountInvalid<T>(int bitCount, int bitsGot = -1) where T : unmanaged
         {
+            if (bitsGot < 0) bitsGot = sizeof(T) << 3;
             if (bitCount < 0) throw new ArgumentException("Bit count cannot be negative");
-            if (bitCount > (sizeof(T) << 3)) throw new ArgumentException($"An object of type {typeof(T).Name} doesn't have {bitCount} bits");
+            if (bitCount > bitsGot) throw new ArgumentException($"An object of type {typeof(T).Name} doesn't have {bitCount} bits");
         }
 
-        public int GetByteCount()
+        public int GetByteCount() => FullBytes.Count;
+
+        public int GetBytes(byte[] dest, int index, int count)
         {
-            lock (bytesLock)
-            {
-                return FullBytes.Count;
-            }
+            if (count > FullBytes.Count) count = FullBytes.Count;
+            FullBytes.CopyTo(0, dest, index, count);
+            return count;
         }
 
-        public void GetBytes(byte[] dest, int index, int count)
-        {
-            lock (bytesLock)
+        public void ClearBytes()
             {
-                FullBytes.CopyTo(0, dest, index, count);
+            FullBytes.Clear();
             }
+
+        public void ClearBytes(int amount)
+        {
+            FullBytes.RemoveRange(0, amount);
         }
 
-        public void Clear()
+        public int GetExtraBitCount() => ExtraBitCount;
+
+        public byte GetExtraBits() => ExtraBits;
+
+        public void ClearExtraBits()
         {
-            lock (bytesLock)
-            {
-                FullBytes.Clear();
-            }
+            ExtraBits = 0;
+            ExtraBitCount = 0;
         }
     }
 }
