@@ -1,6 +1,5 @@
 ﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
 
 namespace MSBVPv2.Compiler
 {
@@ -14,6 +13,7 @@ namespace MSBVPv2.Compiler
         private readonly VideoCapture Capture;
         private Mat? Frame;
         private bool NewFrame = true;
+        private readonly BitAccumulator LastFrame = new();
 
         private readonly int FrameStepInt;
         private readonly int FrameStepFrac;
@@ -34,49 +34,45 @@ namespace MSBVPv2.Compiler
             FrameStepInt = (int)MathF.Floor(fpsCoef);
             FrameStepFrac = (int)MathF.Floor((fpsCoef - FrameStepInt) * 1000f); // it can't be fully represented with ints, so we'll use precision of 1/1000
             // TODO handle frame steps not fitting int or being zero both
-
-            int outArrayLength = TargetWidth * TargetHeight * targetColorSystem.BitsPerColor;
-            outArrayLength = (outArrayLength + 7) >> 3;
-            FrameArray = new byte[outArrayLength]; // TODO other color systems
         }
 
-        public bool QueryFrame(BitAccumulator dest)
+        public unsafe bool QueryFrame(BitAccumulator dest)
         {
             if (Frame is null) return false;
 
             if (NewFrame)
             {
-                Image<Rgba, double> image = Frame.ToImage<Rgba, double>(true);
+                LastFrame.ClearBytes();
+                LastFrame.ClearExtraBits();
+
                 int frameWidth = Frame.Cols;
                 int frameHeight = Frame.Rows;
 
                 int stepXInt = frameWidth / TargetWidth;
                 int stepXFrac = frameWidth - stepXInt * TargetWidth;
+                stepXInt *= 3;
 
                 int stepYInt = frameHeight / TargetHeight;
                 int stepYFrac = frameHeight - stepYInt * TargetHeight;
+                stepYInt *= frameWidth * 3;
 
-                int yInt = 0;
+                byte* yInt = (byte*)Frame.DataPointer.ToPointer();
                 int yFrac = 0;
                 for (int y = 0; y < TargetHeight; y++)
                 {
-                    int xInt = yInt;
+                    byte* xInt = yInt;
                     int xFrac = 0;
                     for (int x = 0; x < TargetWidth; x++)
                     {
-                        double c =
-                            image.Data[xInt, yInt, 0] +
-                            image.Data[xInt, yInt, 1] +
-                            image.Data[xInt, yInt, 2] +
-                            image.Data[xInt, yInt, 3];
-                        dest.AddBit(c > 2.0);
+                        int c = *xInt + *(xInt + 1) + *(xInt + 2);
+                        LastFrame.AddBit(c > 384);
 
                         xInt += stepXInt;
                         xFrac += stepXFrac;
                         if (xFrac >= TargetWidth)
                         {
                             xFrac -= TargetWidth;
-                            xInt++;
+                            xInt += 3;
                         }
                     }
 
@@ -85,10 +81,12 @@ namespace MSBVPv2.Compiler
                     if (yFrac >= TargetHeight)
                     {
                         yFrac -= TargetHeight;
-                        yInt++;
+                        yInt += frameWidth * 3;
                     }
                 }
             }
+
+            dest.AddBits(LastFrame);
 
             // getting next frame (skipping some by step and one more if fractional part overflows)
             for (int i = 0; i < FrameStepInt && Frame is not null; i++) Frame = Capture.QueryFrame();
