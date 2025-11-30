@@ -19,6 +19,8 @@ internal class CLI
 
     public async Task RunCLI()
     {
+        Console.WriteLine("!!! The program wasn't tested well !!!");
+
         while (true)
         {
             string input = read("Specify source file path and name with extension");
@@ -196,7 +198,7 @@ internal class CLI
             frameCount
         );
 
-        Console.WriteLine("Done!");
+        Console.WriteLine("Done! Copy those files into [shader_folder]/shaders: video.glsl, shaders.properties and all frameData.dat. Then you can use [shader_folder] as the shader (archive it if you want)");
         Console.WriteLine("Press ENTER to exit");
         Console.ReadLine();
 
