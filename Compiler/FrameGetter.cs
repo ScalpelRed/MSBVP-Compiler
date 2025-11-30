@@ -16,8 +16,9 @@ namespace MSBVPv2.Compiler
         private readonly BitAccumulator LastFrame = new();
 
         private readonly int FrameStepInt;
-        private readonly int FrameStepFrac;
-        private int FrameIndFrac = 0;
+        private readonly float FrameStepFrac;
+        private float FrameIndFrac = 0;
+        private readonly bool SingleFrame;
 
         public FrameGetter(string filePath, int targetWidth, int targetHeight, float targetFps)
         {
@@ -30,10 +31,10 @@ namespace MSBVPv2.Compiler
             Frame = Capture.QueryFrame();
 
             // frame and pixel position to save are calculated by interpolation used in Bresenham's line algorithm
-            float fpsCoef = (float)Capture.Get(CapProp.Fps) / TargetFps;
-            FrameStepInt = (int)MathF.Floor(fpsCoef);
-            FrameStepFrac = (int)MathF.Floor((fpsCoef - FrameStepInt) * 1000f); // it can't be fully represented with ints, so we'll use precision of 1/1000
-            // TODO handle frame steps not fitting int or being zero both
+            float srcFps = (float)Capture.Get(CapProp.Fps);
+            SingleFrame = srcFps == 0 || targetFps == 0;
+            FrameStepInt = (int)MathF.Floor(srcFps / targetFps);
+            FrameStepFrac = srcFps - FrameStepInt * targetFps;
         }
 
         public unsafe bool QueryFrame(BitAccumulator dest)
@@ -88,15 +89,19 @@ namespace MSBVPv2.Compiler
 
             dest.AddBits(LastFrame);
 
-            // getting next frame (skipping some by step and one more if fractional part overflows)
-            for (int i = 0; i < FrameStepInt && Frame is not null; i++) Frame = Capture.QueryFrame();
-            NewFrame = FrameStepInt > 0;
-            FrameIndFrac += FrameStepFrac;
-            if (FrameIndFrac >= 1000)
+            if (SingleFrame) Frame = null;
+            else
             {
-                Frame = Capture.QueryFrame();
-                NewFrame = true;
-                FrameIndFrac -= 1000;
+                // getting next frame (skipping some by step and one more if fractional part overflows)
+                for (int i = 0; i < FrameStepInt && Frame is not null; i++) Frame = Capture.QueryFrame();
+                NewFrame = FrameStepInt > 0;
+                FrameIndFrac += FrameStepFrac;
+                if (FrameIndFrac >= 1f)
+                {
+                    Frame = Capture.QueryFrame();
+                    NewFrame = true;
+                    FrameIndFrac -= 1f;
+                }
             }
 
             return true;
