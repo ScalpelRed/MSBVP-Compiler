@@ -22,19 +22,24 @@ namespace MSBVPv2.Compiler
 
         public FrameGetter(string filePath, int targetWidth, int targetHeight, float targetFps)
         {
+            if (targetWidth < 0) throw new ArgumentException("Target width cannot be negative.", nameof(targetWidth));
+            if (targetHeight < 0) throw new ArgumentException("Target height cannot be negative.", nameof(targetHeight));
+            if (targetFps < 0) throw new ArgumentException("Target FPS cannot be negative.", nameof(targetFps));
+
             FilePath = filePath;
             TargetWidth = targetWidth;
             TargetHeight = targetHeight;
             TargetFps = targetFps;
 
-            Capture = new(FilePath);
-            Frame = Capture.QueryFrame();
+            Capture = new(filePath);
 
             // frame and pixel position to save are calculated by interpolation used in Bresenham's line algorithm
             float srcFps = (float)Capture.Get(CapProp.Fps);
-            SingleFrame = srcFps == 0 || targetFps == 0;
             FrameStepInt = (int)MathF.Floor(srcFps / targetFps);
             FrameStepFrac = srcFps - FrameStepInt * targetFps;
+
+            if (srcFps == 0 || targetFps == 0) Frame = null;
+            else Frame = Capture.QueryFrame();
         }
 
         public unsafe bool QueryFrame(BitAccumulator dest)
@@ -89,19 +94,15 @@ namespace MSBVPv2.Compiler
 
             dest.AddBits(LastFrame);
 
-            if (SingleFrame) Frame = null;
-            else
+            // getting next frame (skipping some by step and one more if fractional part overflows)
+            for (int i = 0; i < FrameStepInt && Frame is not null; i++) Frame = Capture.QueryFrame();
+            NewFrame = FrameStepInt > 0;
+            FrameIndFrac += FrameStepFrac;
+            if (FrameIndFrac >= 1f)
             {
-                // getting next frame (skipping some by step and one more if fractional part overflows)
-                for (int i = 0; i < FrameStepInt && Frame is not null; i++) Frame = Capture.QueryFrame();
-                NewFrame = FrameStepInt > 0;
-                FrameIndFrac += FrameStepFrac;
-                if (FrameIndFrac >= 1f)
-                {
-                    Frame = Capture.QueryFrame();
-                    NewFrame = true;
-                    FrameIndFrac -= 1f;
-                }
+                Frame = Capture.QueryFrame();
+                NewFrame = true;
+                FrameIndFrac -= 1f;
             }
 
             return true;
